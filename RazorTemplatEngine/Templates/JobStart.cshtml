@@ -1,0 +1,68 @@
+﻿@model RazorTemplatEngine.Models.JobStart
+@{
+    string GetCpuClassName(double cpuPercent)
+    {
+        switch (cpuPercent)
+        {
+            case double percent when percent > 85d:
+                return "high";
+            case double percent when percent > 50d:
+                return "medium";
+            case double percent when percent > 0d:
+            default:
+                return "low";
+        }
+    }
+
+    string GetMemoryClassName(double percentUtilized)
+    {
+        switch (percentUtilized)
+        {
+            case double percent when percent > 32d:
+                return "high";
+            case double percent when percent > 16d:
+                return "medium";
+            case double percent when percent > 0d:
+            default:
+                return "low";
+        }
+    }
+}
+<header>
+    <h1>@Model.Title</h1>
+    <img src="https://matluspub.blob.core.windows.net/public/IoTHeader.jpg"/>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <h3>Enterprise System - @Model.EnterpriseSystem</h3>
+        <h4>Application - @Model.Application</h4>
+        <div class="divTable">
+            <div class="divTableHeading">
+                <div class="divTableHead">Virtual Machine</div>
+                <div class="divTableHead">CPU</div>
+                <div class="divTableHead">Memory</div>
+            </div>
+            <div class="divTableBody">
+                @foreach (var vm in Model.VirtualMachines)
+                {
+
+                    <div class="divTableRow">
+                        <div class="divTableCell">@vm.Name</div>
+                        <div class="divTableCell @GetCpuClassName(vm.Cpu)">@vm.Cpu %</div>
+                        <div class="divTableCell @GetMemoryClassName(vm.Memory)">@vm.Memory GB</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </main>
+</div>
+<footer>
+    <div class="container">
+        &copy; 2020 - Matlus <a href="http://www.matlus.com">http://www.matlus.com</a>
+    </div>
+    <div>
+        <a href="http://www.matlus.com">Unsubscribe</a>
+    </div>
+</footer>
+
+
