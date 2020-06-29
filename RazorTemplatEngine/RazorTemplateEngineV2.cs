@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.Hosting;
-using Microsoft.Extensions.FileProviders;
+using RazorTemplatEngine.Enums;
 using RazorTemplatEngine.Exceptions;
+using RazorTemplatEngine.Providers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,7 +25,6 @@ namespace RazorTemplatEngine
     {
         private const string TemplateFolderName = "Templates";
         private readonly Dictionary<string, RazorCompiledItem> _razorCompiledItems = new Dictionary<string, RazorCompiledItem>();
-        private readonly EmbeddedFileProvider _embeddedFileProvider;
 
         public RazorTemplateEngineV2()
         {
@@ -36,8 +36,6 @@ namespace RazorTemplatEngine
             {
                 _razorCompiledItems.Add(item.Identifier, item);
             }
-
-            _embeddedFileProvider = new EmbeddedFileProvider(thisAssembly);
         }
 
         public async Task<string> RenderTemplateAsync<TModel>(TModel model)
@@ -46,9 +44,9 @@ namespace RazorTemplatEngine
             EnsureAllTemplatesExist(TemplateFolderName, templateNamePrefix);
 
             using var stringWriter = new StringWriter();
-            await LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Header, stringWriter);
+            await HtmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Header, stringWriter);
             await stringWriter.WriteAsync(await RenderTemplateAsync(TemplateFolderName, templateNamePrefix, model));
-            await LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Footer, stringWriter);
+            await HtmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Footer, stringWriter);
 
             stringWriter.Flush();
             return stringWriter.ToString();
@@ -57,8 +55,6 @@ namespace RazorTemplatEngine
         private void EnsureAllTemplatesExist(string templateFolderName, string templateNamePrefix)
         {
             var razorTemplate = GetRazorTemplateName(templateFolderName, templateNamePrefix);
-            var headerEmbeddedResourceName = GetEmbeddedResourceName(templateFolderName, templateNamePrefix, ResourceType.Header);
-            var footerEmbeddedResourceName = GetEmbeddedResourceName(templateFolderName, templateNamePrefix, ResourceType.Footer);
 
             var errorMessages = new StringBuilder();
             if (!_razorCompiledItems.TryGetValue(razorTemplate, out var razorCompiledItem))
@@ -66,37 +62,11 @@ namespace RazorTemplatEngine
                 errorMessages.AppendLine($"The Razor Template file: {razorTemplate}, was not found.");
             }
 
-            var resourceFiles = new[] { headerEmbeddedResourceName, footerEmbeddedResourceName };
-            foreach (var resourceFile in resourceFiles)
-            {
-                try
-                {
-                    var stream = _embeddedFileProvider.GetFileInfo(resourceFile).CreateReadStream();
-                    stream.Close();
-                }
-                catch (FileNotFoundException)
-                {
-                    errorMessages.AppendLine($"The Embedded Resource File: {resourceFile}, was not found.");
-                }
-            }
+            errorMessages.AppendLine(HtmlResourceFileProvider.ValidateDefaultResources(templateFolderName));
 
-            if (errorMessages.Length > 0)
+            if (errorMessages.Length > 2)
             {
                 throw new RazorTemplateNotFoundException(errorMessages.ToString());
-            }
-        }
-
-        private async Task LoadResource(string templateFolderName, string templateNamePrefix, ResourceType resourceType, TextWriter textWriter)
-        {
-            var embeddedResourceName = GetEmbeddedResourceName(templateFolderName, templateNamePrefix, resourceType);
-            var resourceStream = _embeddedFileProvider.GetFileInfo(embeddedResourceName).CreateReadStream();
-            using var streamReader = new StreamReader(resourceStream);
-
-            var buffer = new char[1024];
-            int bytesRead = 0;
-            while ((bytesRead = await streamReader.ReadAsync(buffer, 0, buffer.Length)) > 0)
-            {
-                await textWriter.WriteAsync(buffer, 0, bytesRead);
             }
         }
 
@@ -110,11 +80,6 @@ namespace RazorTemplatEngine
         private static string GetRazorTemplateName(string templateFolderName, string templateName)
         {
             return $"/{templateFolderName}/{templateName}.cshtml";
-        }
-
-        private static string GetEmbeddedResourceName(string templateFolderName, string templateNamePrefix, ResourceType resourceType)
-        {
-            return $"{templateFolderName}.{templateNamePrefix}{resourceType}.html";
         }
 
         private static async Task<string> GetRenderedOutput<TModel>(RazorCompiledItem razorCompiledItem, TModel model)
@@ -143,8 +108,6 @@ namespace RazorTemplatEngine
 
             razorPage.HtmlEncoder = HtmlEncoder.Default;
             return razorPage;
-        }
-
-        private enum ResourceType { Header, Footer }
+        }        
     }
 }

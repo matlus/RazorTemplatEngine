@@ -68,8 +68,6 @@ namespace RazorTemplateEngineTests
             catch (RazorTemplateNotFoundException e)
             {
                 StringAssert.Contains(e.Message, "/Templates/Object.cshtml, was not found");
-                StringAssert.Contains(e.Message, "Templates.ObjectHeader.html, was not found");
-                StringAssert.Contains(e.Message, "Templates.ObjectFooter.html, was not found");
             }
         }
 
