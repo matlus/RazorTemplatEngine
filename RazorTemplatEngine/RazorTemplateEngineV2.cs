@@ -89,8 +89,7 @@ namespace RazorTemplatEngine
         {
             using var stringWriter = new StringWriter();
             var razorPage = GetRazorPageInstance(razorCompiledItem, model, stringWriter);
-            await razorPage.ExecuteAsync();
-            await razorPage.FlushAsync();
+            await razorPage.ExecuteAsync();            
             return stringWriter.ToString();
         }
 
