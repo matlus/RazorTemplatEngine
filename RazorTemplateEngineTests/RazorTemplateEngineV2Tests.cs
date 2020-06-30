@@ -19,6 +19,7 @@ namespace RazorTemplateEngineTests
         }
 
         [TestMethod]
+        [TestCategory("Acceptance Test")]
         public async Task RenderTemplateAsync_WhenTemplateExistsAndModelProvided_ShouldRenderTemplate()
         {
             // Arrange
@@ -54,6 +55,7 @@ namespace RazorTemplateEngineTests
         }
 
         [TestMethod]
+        [TestCategory("Acceptance Test")]
         public async Task RenderTemplateAsync_WhenRazorOrResourceTemplateDoNotExist_ShouldThrow()
         {
             // Arrange

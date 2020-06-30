@@ -12,9 +12,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+[assembly: InternalsVisibleTo("RazorTemplateEngineTests")]
 
 namespace RazorTemplatEngine
 {
@@ -25,6 +27,7 @@ namespace RazorTemplatEngine
     {
         private const string TemplateFolderName = "Templates";
         private readonly Dictionary<string, RazorCompiledItem> _razorCompiledItems = new Dictionary<string, RazorCompiledItem>();
+        private readonly HtmlResourceFileProvider _htmlResourceFileProvider = new HtmlResourceFileProvider();
 
         public RazorTemplateEngineV2()
         {
@@ -44,9 +47,9 @@ namespace RazorTemplatEngine
             EnsureAllTemplatesExist(TemplateFolderName, templateNamePrefix);
 
             using var stringWriter = new StringWriter();
-            await HtmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Header, stringWriter);
+            await _htmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Header, stringWriter);
             await stringWriter.WriteAsync(await RenderTemplateAsync(TemplateFolderName, templateNamePrefix, model));
-            await HtmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Footer, stringWriter);
+            await _htmlResourceFileProvider.LoadResource(TemplateFolderName, templateNamePrefix, ResourceType.Footer, stringWriter);
 
             stringWriter.Flush();
             return stringWriter.ToString();
@@ -62,7 +65,7 @@ namespace RazorTemplatEngine
                 errorMessages.AppendLine($"The Razor Template file: {razorTemplate}, was not found.");
             }
 
-            errorMessages.AppendLine(HtmlResourceFileProvider.ValidateDefaultResources(templateFolderName));
+            errorMessages.AppendLine(_htmlResourceFileProvider.ValidateDefaultResources(templateFolderName));
 
             if (errorMessages.Length > 2)
             {

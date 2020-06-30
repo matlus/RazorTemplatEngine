@@ -1,5 +1,5 @@
 ﻿
 namespace RazorTemplatEngine.Enums
 {
-    internal enum ResourceType { Header, Footer }
+    public enum ResourceType { Header, Footer }
 }

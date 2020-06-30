@@ -1,41 +1,49 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using RazorTemplatEngine.Enums;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 
 namespace RazorTemplatEngine.Providers
 {
-    internal static class HtmlResourceFileProvider
+    internal sealed class HtmlResourceFileProvider
     {
-        private static readonly EmbeddedFileProvider s_embeddedFileProvider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly());
-        private static readonly HashSet<string> s_embeddedResourceFiles = new HashSet<string>();
+        private readonly IFileProvider _fileProvider;
+        private readonly HashSet<string> _embeddedResourceFiles = new HashSet<string>();
 
-        static HtmlResourceFileProvider()
+        [ExcludeFromCodeCoverage]
+        public HtmlResourceFileProvider()
+            :this(new EmbeddedFileProvider(Assembly.GetExecutingAssembly()))
         {
-            var directoryContents = s_embeddedFileProvider.GetDirectoryContents("");
+        }
+
+        public HtmlResourceFileProvider(IFileProvider fileProvider)
+        {
+            _fileProvider = fileProvider;
+            var directoryContents = _fileProvider.GetDirectoryContents("");
             foreach (var item in directoryContents)
             {
-                s_embeddedResourceFiles.Add(item.Name);
+                _embeddedResourceFiles.Add(item.Name);
             }
         }
 
-        public static Stream GetResourceStream(string templateFolderName, string resourceFile, ResourceType resourceType)
+        public Stream GetResourceStream(string templateFolderName, string resourceFile, ResourceType resourceType)
         {
             var defaultResourceName = GetEmbeddedResourceName(templateFolderName, "_", resourceType);
             var resourceFileName = GetEmbeddedResourceName(templateFolderName, resourceFile, resourceType);
 
-            var resourceName = s_embeddedResourceFiles.Contains(resourceFileName) ? resourceFileName : defaultResourceName;
-            return s_embeddedFileProvider.GetFileInfo(resourceName).CreateReadStream();
+            var resourceName = _embeddedResourceFiles.Contains(resourceFileName) ? resourceFileName : defaultResourceName;
+            return _fileProvider.GetFileInfo(resourceName).CreateReadStream();
         }
 
-        public static string ValidateDefaultResources(string templateFolderName)
+        public string ValidateDefaultResources(string templateFolderName)
         {
             string defaultHeaderMissing = null;
             if (!Exists(templateFolderName, "_", ResourceType.Header))
             {
-                defaultHeaderMissing = "The Default Header Html Resource: \"_Header.html\", was Not found in the folder: " + templateFolderName;
+                defaultHeaderMissing = "The Default Header Html Resource: \"_Header.html\", was Not found in the folder: " + templateFolderName + "\r\n";
             }
 
             string defaultFooterMissing = null;
@@ -54,7 +62,7 @@ namespace RazorTemplatEngine.Providers
             }
         }
 
-        public static async Task LoadResource(string templateFolderName, string templateNamePrefix, ResourceType resourceType, TextWriter textWriter)
+        public async Task LoadResource(string templateFolderName, string templateNamePrefix, ResourceType resourceType, TextWriter textWriter)
         {
             var resourceStream = GetResourceStream(templateFolderName, templateNamePrefix, resourceType);
             using var streamReader = new StreamReader(resourceStream);
@@ -72,10 +80,10 @@ namespace RazorTemplatEngine.Providers
             return $"{templateFolderName}.{fileName}{resourceType}.html";
         }
 
-        private static bool Exists(string templateFolderName, string resourceFile, ResourceType resourceType)
+        private bool Exists(string templateFolderName, string resourceFile, ResourceType resourceType)
         {
             var resourceFileName = GetEmbeddedResourceName(templateFolderName, resourceFile, resourceType);
-            return s_embeddedResourceFiles.Contains(resourceFileName);
+            return _embeddedResourceFiles.Contains(resourceFileName);
         }
     }
 }
